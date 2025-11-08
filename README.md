@@ -1,197 +1,166 @@
-# 🚀 **Continuous Integration & Continuous Deployment - GitHub Actions**
 
-This stage extends the **MLOps Iris Classifier III** project by introducing **GitHub Actions** for fully automated **Continuous Integration (CI)** and **Continuous Deployment (CD)**.
-It builds your Flask-based Iris classifier into a Docker image, pushes it to **Google Artifact Registry**, and deploys it to **Google Kubernetes Engine (GKE)** — all triggered automatically when code is pushed to `main`.
+# 🌸 **MLOps Iris Classifier — End-to-End CI/CD Deployment (GitHub Actions Edition)**
 
-<p align="center">
-  <img src="img/github_actions/workflow_success.png" alt="Successful GitHub Actions Workflow" style="width:100%;height:auto;" />
-</p>
-
-## 🧩 **Overview**
-
-This completes a trilogy of CI/CD implementations for the same dataset:
-
-| Stage | CI/CD Tool                      | Cloud Platform        | Deployment Method         |
-| :---- | :------------------------------ | :-------------------- | :------------------------ |
-| 1️⃣   | **CircleCI**                    | Google Cloud Platform | GKE via Artifact Registry |
-| 2️⃣   | **GitLab CI/CD**                | Google Cloud Platform | GKE via Artifact Registry |
-| 3️⃣   | **GitHub Actions** (this stage) | Google Cloud Platform | GKE via Artifact Registry |
-
-The core cloud stack remains constant — **GCP**, **Artifact Registry**, and **Kubernetes Engine** — while each stage showcases a different automation framework.
-
-## ⚙️ **Setup Instructions**
-
-Follow these steps carefully to configure and run the GitHub Actions pipeline.
-
-### 1️⃣ Install the GitHub Actions Extension in VS Code
-
-Open the **Extensions** panel → search for **“GitHub Actions”** → install it to manage and debug workflows directly.
+This repository demonstrates a **complete MLOps workflow** using the classic **Iris dataset**, progressing from data preprocessing and model training to full web deployment through an automated **CI/CD (Continuous Integration and Continuous Deployment)** pipeline built with **GitHub Actions** and deployed to **Google Cloud Platform (GCP)**.
 
 <p align="center">
-  <img src="img/github_actions/extension.png" alt="GitHub Actions Extension in VS Code" style="width:100%;height:auto;" />
+  <img src="img/flask/flask_app.gif" alt="Deployed Flask Iris Classifier Application" style="width:100%; height:auto;" />
 </p>
 
-### 2️⃣ Create Deployment Configuration Files
+While the machine learning use case — **Iris species classification** — is intentionally simple, the project’s main objective is to showcase a **production-grade MLOps workflow** using **GitHub Actions** for automation, containerisation, and cloud deployment via **Google Kubernetes Engine (GKE)**.
 
-In your project root, add two new files.
+## 🧩 **Project Overview**
 
-#### 🐳 Dockerfile — container build definition
+This project walks through the **entire lifecycle** of a machine learning system — from raw data to live deployment — using a modular, reproducible, and scalable architecture.
+Each stage builds on the previous one, ensuring consistent execution and traceability throughout the pipeline.
 
-```dockerfile
-FROM python:3.12
-WORKDIR /app
-COPY . /app
-RUN pip install --no-cache-dir -e .
-EXPOSE 5000
-ENV FLASK_APP=app.py
-CMD ["python", "app.py"]
-```
+### 🌱 **Stage 00 — Project Setup**
 
-#### ☸️ kubernetes-deployment.yaml — deployment and service
+A structured repository layout was established, introducing:
 
-```yaml
-apiVersion: apps/v1
-kind: Deployment
-metadata:
-  name: mlops-iris-iii
-spec:
-  replicas: 2
-  selector:
-    matchLabels:
-      app: mlops-iris-iii
-  template:
-    metadata:
-      labels:
-        app: mlops-iris-iii
-    spec:
-      containers:
-        - name: mlops-iris-iii
-          image: us-central1-docker.pkg.dev/sacred-garden-474511-b9/mlops-iris-iii/mlops-iris-iii:latest
-          imagePullPolicy: Always
-          ports:
-            - containerPort: 5000
-          resources:
-            requests:
-              cpu: "250m"
-              memory: "256Mi"
+* Core directories: `src/`, `pipeline/`, `artifacts/`, and `img/`
+* Dependency management with **`uv`** for reproducible environments
+* Editable package installation via `setup.py`
+* Logging and exception-handling frameworks for traceable experimentation
 
-apiVersion: v1
-kind: Service
-metadata:
-  name: mlops-service
-spec:
-  selector:
-    app: mlops-iris-iii
-  ports:
-    - protocol: TCP
-      port: 80
-      targetPort: 5000
-  type: LoadBalancer
-```
+This created the foundation for the remaining stages.
 
-### 3️⃣ Add GitHub Secrets for GCP Access
+### 💾 **Stage 01 — Data Processing**
 
-1. Open your GitHub repo → **Settings** tab
-2. Select **Secrets and variables → Actions**
-3. Add these two secrets:
+The **`data_processing.py`** module handled the complete preprocessing workflow:
 
-| Secret Name      | Value                                                |
-| :--------------- | :--------------------------------------------------- |
-| `GCP_PROJECT_ID` | Your GCP Project ID (e.g. `sacred-garden-474511-b9`) |
-| `GCP_SA_KEY`     | Contents of your GCP Service Account JSON key        |
+* Loading and cleaning the Iris dataset
+* Handling outliers and missing values
+* Splitting data into training and test sets
+* Persisting processed artefacts (`X_train.pkl`, `y_test.pkl`, etc.)
+
+All transformations were reproducible and logged to ensure consistent results.
+
+### 🧠 **Stage 02 — Model Training**
+
+The **`model_training.py`** module trained a **Decision Tree Classifier** and performed model evaluation, generating key metrics:
+
+* Accuracy, precision, recall, and F1-score
+* A confusion matrix (`confusion_matrix.png`)
+* A serialised model file (`model.pkl`)
+
+Exception handling and centralised logging ensured reliability during training.
+
+### 🌸 **Stage 03 — Flask Application**
+
+A **Flask web interface** was built to deploy the trained model as an interactive web app.
+Users can input sepal and petal dimensions and receive predictions in real time.
+
+This stage introduced:
+
+* A responsive HTML front-end (`templates/index.html`)
+* CSS styling (`static/style.css`)
+* Flask integration via `app.py` for live inference
 
 <p align="center">
-  <img src="img/github_actions/settings.png" alt="GitHub Repository Secrets Settings" style="width:100%;height:auto;" />
+  <img src="img/flask/flask_app.png" alt="Flask Iris Classifier Application" style="width:100%; height:auto;" />
 </p>
 
-### 4️⃣ Create the GitHub Actions Workflow
+### ⚙️ **Stage 04 — Training Pipeline**
 
-```
-.github/
-└── workflows/
-    └── deploy.yml
-```
+The **`pipeline/training_pipeline.py`** script unified **data processing** and **model training** into a single orchestrated pipeline, automating every key step.
 
-Paste the full pipeline code into `deploy.yml`, commit, and push to `main`.
+It provides a reproducible execution workflow that can be triggered locally or by external automation tools (e.g. CI/CD).
+This was the bridge between local experimentation and cloud automation.
 
-### 5️⃣ Run the Workflow
+### ☁️ **Stage 05 — Google Cloud Platform (GCP) Setup**
 
-Go to the **Actions** tab → observe the workflow trigger.
-A successful run looks like this:
+The cloud infrastructure was configured within **Google Cloud Platform** to support containerised ML workloads.
+
+Key setup tasks included:
+
+* Enabling APIs for **Kubernetes Engine**, **Artifact Registry**, and **Compute Engine**
+* Creating an **Artifact Registry** repository (`mlops-iris-iii`) in `us-central1`
+* Generating a **Service Account** with roles for Artifact Registry and Kubernetes deployment
+* Creating a **GKE Autopilot cluster** (`autopilot-cluster-1`) for managed workloads
+
+This established the secure, scalable backbone for automated deployment.
+
+### 🚀 **Stage 06 — CI/CD Deployment (GitHub Actions → GCP)**
+
+Finally, the project integrated **GitHub Actions** to automate the build-and-deploy workflow.
+Each push to the `main` branch triggers the pipeline defined in **`.github/workflows/deploy.yml`**.
+
+The CI/CD sequence:
+
+1. **Build** — Create a Docker image for the Flask app using the `Dockerfile`
+2. **Push** — Upload the image to **Google Artifact Registry**
+3. **Deploy** — Apply `kubernetes-deployment.yaml` to **GKE** to update the live application
+
+The pipeline uses the official **`google-github-actions`** modules for authentication, image management, and Kubernetes deployment.
 
 <p align="center">
-  <img src="img/github_actions/workflow_success.png" alt="GitHub Actions Workflow Success" style="width:100%;height:auto;" />
+  <img src="img/github_actions/workflow_success.png" alt="GitHub Actions Workflow Success" style="width:100%; height:auto;" />
 </p>
 
-### 6️⃣ Verify Deployment on Google Cloud
+Once completed, the application becomes publicly available through the external **LoadBalancer endpoint** exposed by GKE.
 
-Open **Google Cloud Console → Kubernetes Engine → Workloads** and locate `mlops-iris-iii`.
+## 💡 **Why GitHub Actions?**
 
-<p align="center">
-  <img src="img/github_actions/gcp_workload.png" alt="GCP Workload Page" style="width:100%;height:auto;" />
-</p>
+GitHub Actions was chosen for its **tight integration**, **ease of setup**, and **robust cloud support**.
 
-Scroll to **Exposing services** to find the endpoint.
+### ✅ **Key Advantages**
 
-<p align="center">
-  <img src="img/github_actions/endpoint.png" alt="GCP Endpoint URL" style="width:100%;height:auto;" />
-</p>
+* **Native integration** — workflows trigger automatically on push or pull requests
+* **Simple YAML configuration** stored under `.github/workflows/`
+* **Secure secret management** through repository settings
+* **First-class GCP support** with official authentication actions
+* **Zero-infrastructure overhead** — runs on GitHub-hosted runners
+* **Fast, scalable execution** — ideal for iterative machine learning workflows
 
-Click the endpoint link to launch your live Flask application.
+These features make **GitHub Actions** a clean, lightweight, and powerful choice for modern CI/CD in MLOps.
 
-### 7️⃣ Test Your Deployed Application
-
-Use the web UI to submit input and receive predictions from the Iris Classifier.
-
-<p align="center">
-  <img src="img/flask/flask_app.png" alt="Flask Iris Classifier App" style="width:100%;height:auto;" />
-</p>
-
-## 📂 **Updated Project Structure**
+## 🗂️ **Final Project Structure**
 
 ```text
 mlops_iris_classifier/
 ├── .venv/                          # 🧩 Local virtual environment (created by uv)
-├── artifacts/
+├── artifacts/                      # 💾 Raw, processed, and model artefacts
 │   ├── raw/
-│   │   └── data.csv                # 🌸 Input Iris dataset
-│   ├── processed/                  # 💾 Preprocessed artefacts (from DataProcessing)
-│   │   ├── X_train.pkl
-│   │   ├── X_test.pkl
-│   │   ├── y_train.pkl
-│   │   └── y_test.pkl
-│   └── models/                     # 🧠 Trained model and evaluation artefacts
-│       ├── model.pkl
-│       └── confusion_matrix.png
-├── img/
-│   ├── flask/
-│   └── github_actions/
+│   ├── processed/
+│   └── models/
 ├── pipeline/
-│   └── training_pipeline.py        # Executes data preparation + model training
+│   └── training_pipeline.py         # Unified data processing + model training
 ├── src/
-│   ├── __init__.py
-│   ├── custom_exception.py         # Unified and detailed exception handling
-│   ├── logger.py                   # Centralised logging configuration
-│   ├── data_processing.py          # 🌱 Data preparation workflow
-│   └── model_training.py           # 🌳 Model training and evaluation
-├── static/                         # 🎨 Visual assets (used in Flask UI)
-├── templates/                      # 🧩 Flask HTML templates (for app stage)
+│   ├── data_processing.py
+│   ├── model_training.py
+│   ├── logger.py
+│   └── custom_exception.py
+├── templates/
+│   └── index.html                  # Flask UI
+├── static/
+│   ├── style.css
+│   └── img/app_background.jpg
+├── img/
+│   ├── flask/flask_app.gif         # Animated Flask app demo
+│   ├── github_actions/             # Screenshots for GitHub + GCP setup
+│   └── gcp/
+├── Dockerfile                      # 🐳 Container image definition
+├── kubernetes-deployment.yaml      # ☸️ Kubernetes deployment specification
 ├── .github/
 │   └── workflows/
-│       └── deploy.yml              # 🚀 GitHub Actions CI/CD pipeline
-├── .gitignore                      # 🚫 Git ignore rules
-├── .python-version                 # 🐍 Python version pin
-├── pyproject.toml                  # ⚙️ Project metadata and uv configuration
-├── requirements.txt                # 📦 Python dependencies
-├── setup.py                        # 🔧 Editable install support
-├── Dockerfile                      # 🐳 Container build file
-├── kubernetes-deployment.yaml      # ☸️ Kubernetes deployment definition
-└── uv.lock                         # 🔒 Locked dependency versions
+│       └── deploy.yml              # ⚙️ GitHub Actions CI/CD pipeline
+├── app.py                          # Flask application entry point
+├── pyproject.toml                  # Project metadata and dependencies
+├── setup.py                        # Editable install support
+└── requirements.txt                # Python dependencies
 ```
 
-## 🌈 **Outcome**
+## 🌐 **End-to-End Workflow Summary**
 
-After completing this stage, your **MLOps Iris Classifier** deploys automatically to **GKE** through **GitHub Actions** — no manual steps required.
-Every push to `main` triggers a rebuild, container push, and Kubernetes rollout, ensuring continuous, reproducible delivery.
+1. **Data Processing** → clean, split, and persist artefacts
+2. **Model Training** → train and evaluate the Decision Tree Classifier
+3. **Flask Application** → serve predictions via web interface
+4. **Pipeline Orchestration** → unify preprocessing + training
+5. **GCP Setup** → configure cluster, registry, and permissions
+6. **CI/CD Deployment** → automate build → push → deploy to GKE
 
-With this, you have successfully completed all three CI/CD implementations — **CircleCI**, **GitLab CI**, and **GitHub Actions** — each integrated seamlessly with Google Cloud Platform.
+## ✅ **In Summary**
+
+This project transforms a simple Iris classification task into a **fully automated MLOps pipeline** using **GitHub Actions** and **Google Cloud Platform**.
+It demonstrates how to take a traditional ML workflow — data, model, and app — and operationalise it through a reproducible, cloud-native CI/CD system that delivers scalable, production-ready deployments with every code push.
